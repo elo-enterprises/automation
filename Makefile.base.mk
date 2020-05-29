@@ -195,12 +195,11 @@ _help-parser:
 	hdr = '\n$(COLOR_YELLOW)--- TARGETS BY SOURCE---$(NO_COLOR)\n\n  '; \
 	print(hdr + '\n  '.join(['[$(COLOR_GREEN){}$(NO_COLOR)] ($(COLOR_CYAN){}$(NO_COLOR))'.format( \
 		_, '..') for _, h in sources.items()])); \
-	msg_t = '[$(COLOR_GREEN){target}$(NO_COLOR)]\n'; \
-	msg_t+= '    source: $(COLOR_CYAN){source}$(NO_COLOR)\n'; \
+	msg_t = '[$(COLOR_GREEN){target}$(NO_COLOR)] ($(COLOR_CYAN){source}$(NO_COLOR))\n'; \
 	msg_t+= '{args}'; \
 	msg_t+= '{prereqs}'; \
-	print(\
-		'\n$(COLOR_YELLOW)--- ALL TARGETS ---$(NO_COLOR)\n\n  ' + \
+	hdr='\n$(COLOR_YELLOW)--- ALL TARGETS ---$(NO_COLOR)\n\n  '; \
+	print(hdr + \
 		'\n  '.join(\
 			[	msg_t.format( \
 					target = h['target'], \
