@@ -95,14 +95,14 @@ Placeholder
 
 This section covers some of the rationale behind an automation library that's (at least partially) based around Makefiles.  Makefile based automation is not my favorite thing, for a variety of reasons.  In most ways writing Makefiles is significantly nicer than a pure-bash library, yet far worse than having an actual programming language at your disposal.  In particular quoting and variable interpolation is often surprising and code-reuse can be challenging.  
 
-So why use it if it's a pain to write?  A big part of the reason is because it's easy to run, and close enough to the shell that it's perfect for project automation.  I've also noticed that you're writing stuff that becomes overly difficult in Makefiles, you are probably NOT writing "project automation", and might be writing something that would be better expressed as a "one-off tool", i.e. a tool that is *external* to the project.
+So why use it if it's a pain to write?  A big part of the reason is because it's easy to run, and close enough to the shell that it's perfect for project automation.  I've also noticed that you're writing stuff that becomes overly difficult in Makefiles, you are probably NOT writing "project automation", and might be writing something that would be better expressed as a tool that is *external* to the project.
 
-**Make is simple**, at least compared to other automation frameworks.  In a world with Gulpfiles, Rakefiles, Fabfiles, and many other options for project automation, Makefile's feel like a lightweight and mostly dependency-free approach.
+**Make is simple**, at least compared to other automation frameworks.  In a world with Gulpfiles, Rakefiles, Fabfiles, Jenkinsfiles, Vagrantfiles, and many other options for project automation, Makefile's feel like a lightweight and mostly dependency-free approach.
 
-**Make is lean**, both in terms of concepts and dependencies.  Sure, many development environments might have access to python or ruby too, but Makefiles are leaner and don't require the rvm or virtualenv setup step.  
+**Make is lean**, both in terms of concepts and dependencies.  Sure, many development environments might have access to python or ruby too, but Makefiles are leaner and don't require the rvm or virtualenv setup step.  If you're mainly using it for project automation, this further cuts down the cognitive load of the tool because chances are you don't care about a lot of the file-system-layout related subtleties that orchestrating compilation would involve.
 
-**Makefiles are language agnostic** and don't commit themselves to any preference for say Python, Ruby, or JS.  Polyglot development shops may especially appreciate it as a reasonable middle ground between different teams.  A further issue is that implementing your core automation library with, for instance, Ruby/Rake would tend to not only couple you to Ruby but to dictate your base version of a Ruby stack.
+**Makefiles are language agnostic** and don't commit themselves to any preference for say Python, Ruby, or JS.  Polyglot development shops may especially appreciate it as a reasonable middle ground between different teams (i.e. publishing interfaces for CI/CD, etc).  In the case of CI/CD, using Makefiles is container friendly, tends to decouple you from the implementation detail of Jenkins vs Github vs Gitlab actions.
 
-**Make is ubiquitous**.  Really, it's almost everywhere already, and it's nice that any CI server, docker container, or local development environment already has `make`.  
+**Make is ubiquitous**.  Really, it's almost everywhere already, and it's nice that any CI server, docker container, or local development environment already has `make`.
 
 **Make is fairly transparent** in terms of both it's source and it's execution context, and fairly traceable compared with a fat binary build tool or a docker container.

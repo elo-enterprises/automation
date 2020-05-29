@@ -1,3 +1,4 @@
+#!/usr/bin/make -f
 # Makefile.base.mk:
 #
 # DESCRIPTION:
@@ -143,13 +144,12 @@ _help-helper:
 	awk -F':' '/^[a-zA-Z0-9][^\$$#\/\\t=]*:([^=]|$$)/ {split(\$$1,A,/ /);\
 	for(i in A)print A[i]}' | grep -v '__\$$' | grep -v '\[' | sort"
 help:
-	$(call _announce_target, $@)
 	@make _help-helper \
 	| make _help-parser
 
-.ONESHELL:
-_help-parser: SHELL := python3
-_help-parser: .SHELLFLAGS := -c
+_help-parser: private SHELL=python2
+_help-parser: private .SHELLFLAGS = -c
+.SILENT:_help-parser
 _help-parser:
 	from __future__ import print_function; \
 	import os, re, sys, functools; \
@@ -195,7 +195,6 @@ _help-parser:
 				) for _, h in targets.items() \
 			]),\
 	)
-
 
 # Helpers and data for user output things
 #
