@@ -154,6 +154,7 @@ _help-parser:
 	from __future__ import print_function; \
 	import os, re, sys, functools; \
 	from collections import OrderedDict; \
+	merge = lambda x, **y: { k:v for k,v in x.items()+y.items() }; \
 	inp = sys.stdin.read(); \
 	lines = inp.split('\n'); \
 	ignored = 'Makefile list fail i in not if else for'.split(); \
@@ -165,15 +166,27 @@ _help-parser:
 	hints = [ [ t, block[block.find('recipe to execute (from '):].split('\n')[0] ] for t, block in hints]; \
 	hints = [ [ t, block[block.find('(from ')+7:block.rfind(')')+2]] for t, block in hints ]; \
 	hints = [ [ t, block.split(', ')[0][:-1] +' '+ block.split(', ')[-1][:-2]] for t, block in hints ]; \
-	hints = [ dict(target=t.split(':')[0], args=t.split(':')[1:], file=block.strip().split() and block.split()[0], line=block.strip().split() and block.split(' line ')[-1]) for t, block in hints ]; \
-	hints = [ dict(target=h['target'], args=[_.strip() for _ in h['args'] if _], file=(h['file'] and h['file'].replace(os.getcwd(), '.')) or None, line=h['line']) for h in hints ]; \
-	hints = [ {k: v for d in [h, dict()] for k, v in d.items()} for h in hints]; \
-	hints = [ dict(target=h['target'], file=h['file'], line=h['line'], \
-		prereqs=[x for x in h['args'] if not x.startswith('assert-')], \
+	hints = [ dict( \
+		target=t.split(':')[0], \
+		args=t.split(':')[-1].split(), \
+		file=block.strip().split() and block.split()[0], \
+		line=block.strip().split() and block.split(' line ')[-1]) for t, block in hints ]; \
+	print(hints); print('----------'); \
+	hints = [ merge(h, \
+		args=[_.strip() for _ in h['args'] if _.strip()], \
+		file=(h['file'] and h['file'].replace(os.getcwd(), '.')) or None,) \
+		for h in hints ]; \
+	hints = [ merge(h, \
+		source=':'.join([h['file'], h['line']]) if (h['file'] and h['line']) else '?',) \
+		for h in hints ]; \
+	hints = [ merge(h, \
+		prereqs=[x for x in h['args'] if not x.startswith('assert-')],) \
+		for h in hints ]; \
+	hints = [ merge(h, \
 		args=functools.reduce(lambda x,y: x+y, [_.split() for _ in h['args']],[]),) \
 		for h in hints ]; \
-	hints = [ dict(target=h['target'], args=[x[len('assert-'):] for x in h['args'] if x.startswith('assert-')], file=h['file'], line=h['line']) for h in hints ]; \
-	hints = [ {k: v for d in [h, {}] for k, v in d.items()} for h in hints]; \
+	hints = [ merge(h, args=[x[len('assert-'):] for x in h['args'] if x.startswith('assert-')],) for h in hints ]; \
+	print(hints); print('----------'); \
 	targets = sorted(hints, key=lambda _: _['target']); \
 	targets = OrderedDict([[_['target'], _] for _ in targets]); \
 	sources = [ [f, [h for h in hints if h['file']==f]] for f in set([x['file'] for x in hints]) if f ]; \
@@ -184,14 +197,16 @@ _help-parser:
 		_, '..') for _, h in sources.items()])); \
 	msg_t = '[$(COLOR_GREEN){target}$(NO_COLOR)]\n'; \
 	msg_t+= '    source: $(COLOR_CYAN){source}$(NO_COLOR)\n'; \
-	msg_t+= '  {args}'; \
+	msg_t+= '{args}'; \
+	msg_t+= '{prereqs}'; \
 	print(\
 		'\n$(COLOR_YELLOW)--- ALL TARGETS ---$(NO_COLOR)\n\n  ' + \
 		'\n  '.join(\
 			[	msg_t.format( \
 					target = h['target'], \
-					source = ':'.join([h['file'], h['line']]) if (h['file'] and h['line']) else '?', \
-					args = '  args: {}'.format(h['args']) if h['args'] else '' \
+					source = h['source'], \
+					args = '    args: {}\n'.format(h['args']) if h['args'] else '', \
+					prereqs='    prereqs: {}\n'.format(h['prereqs']) if h['prereqs'] else '', \
 				) for _, h in targets.items() \
 			]),\
 	)
