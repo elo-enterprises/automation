@@ -189,16 +189,20 @@ _help-parser:
 	print(hints); print('----------'); \
 	targets = sorted(hints, key=lambda _: _['target']); \
 	targets = OrderedDict([[_['target'], _] for _ in targets]); \
-	sources = [ [f, [h for h in hints if h['file']==f]] for f in set([x['file'] for x in hints]) if f ]; \
+	src_files = set([x['file'] for x in hints]); \
+	sources = [ [f, [h for h in hints if h['file']==f]] for f in src_files if f ]; \
 	sources = sorted(sources, key=lambda _: _[0]); \
-	sources=OrderedDict(sources); \
-	hdr = '\n$(COLOR_YELLOW)--- TARGETS BY SOURCE---$(NO_COLOR)\n\n  '; \
-	print(hdr + '\n  '.join(['[$(COLOR_GREEN){}$(NO_COLOR)] ($(COLOR_CYAN){}$(NO_COLOR))'.format( \
-		_, '..') for _, h in sources.items()])); \
+	sources = OrderedDict(sources); \
+	hdr = '\n$(COLOR_YELLOW)--- TARGETS BY SOURCE---$(NO_COLOR)\n\n'; \
+	msg_t = '[$(COLOR_BLUE){file}$(NO_COLOR)] ($(COLOR_CYAN){count} targets$(NO_COLOR))\n{summary}'; \
+	print(hdr + '\n'.join([msg_t.format( \
+		file=file, count=len(targets), \
+		summary='\n'.join(['  [$(COLOR_GREEN){}$(NO_COLOR)]'.format(t['target']) for t in tlist]) + '\n',) \
+		for file, tlist in sources.items()])); \
 	msg_t = '[$(COLOR_GREEN){target}$(NO_COLOR)] ($(COLOR_CYAN){source}$(NO_COLOR))\n'; \
 	msg_t+= '{args}'; \
 	msg_t+= '{prereqs}'; \
-	hdr='\n$(COLOR_YELLOW)--- ALL TARGETS ---$(NO_COLOR)\n\n  '; \
+	hdr = '\n$(COLOR_YELLOW)--- ALL TARGETS ---$(NO_COLOR)\n\n  '; \
 	print(hdr + \
 		'\n  '.join(\
 			[	msg_t.format( \
@@ -223,6 +227,7 @@ COLOR_OK=${COLOR_GREEN}
 COLOR_RED=\033[91m
 COLOR_CYAN=\033[96m
 COLOR_LBLUE=\033[94m
+COLOR_BLUE=${COLOR_LBLUE}
 ERROR_COLOR=${COLOR_RED}
 WARN_COLOR:=\033[93m
 	WARN_COLOR:=\033[93m
