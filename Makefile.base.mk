@@ -245,26 +245,25 @@ _help-parser:
 	sources = OrderedDict(sources); \
 	thdr = '[$(COLOR_GREEN){target}$(NO_COLOR)] ($(COLOR_CYAN){source}$(NO_COLOR))\n'; \
 	shdr = '\n$(COLOR_YELLOW)--- TARGETS BY SOURCE---$(NO_COLOR)\n\n'; \
-	msg_t = '[$(COLOR_BLUE){file}$(NO_COLOR)] ($(COLOR_CYAN){count} targets$(NO_COLOR))\n{summary}'; \
-	print(shdr + '\n'.join([msg_t.format( \
+	msg_t = '[$(COLOR_BLUE){file}$(NO_COLOR)] ($(COLOR_CYAN){count} targets$(NO_COLOR)){summary}'; \
+	o = shdr + '\n'.join([msg_t.format( \
 		file=file, count=len(targets), \
-		summary='\n'.join(['    '+thdr.format(**t) for t in tlist]) + '\n',) \
-		for file, tlist in sources.items()])); \
+		summary='\n' + '\n'.join(['    '+thdr.format(**t) for t in tlist]),) \
+		for file, tlist in sources.items()]); \
 	msg_t = thdr; \
 	msg_t+= '{args}'; \
 	msg_t+= '{prereqs}'; \
 	msg_t+= '$(COLOR_DIM){docs}$(COLOR_RDIM)'; \
-	print('\n$(COLOR_YELLOW)--- ALL TARGETS ---$(NO_COLOR)\n\n  ' + \
-		'\n  '.join(\
-			[	msg_t.format( \
-					target = h['target'], \
-					source = h['source'], \
-					docs = ('    '+'\n    '.join(h['docs'])) if h['docs'] else '', \
-					args = '    $(COLOR_MAGENTA)args:${NO_COLOR} {}\n'.format(h['args']) if h['args'] else '', \
-					prereqs='    $(COLOR_RED)prereqs:$(NO_COLOR) {}\n'.format(h['prereqs']) if h['prereqs'] else '', \
-				) for _, h in targets.items() \
-			]),\
-	)
+	targets=[	msg_t.format( \
+			target = h['target'], \
+			source = h['source'], \
+			docs = ('    '+'\n    '.join(h['docs'])) if h['docs'] else '', \
+			args = ('    $(COLOR_MAGENTA)args:${NO_COLOR} {}\n'.format(h['args'])) if h['args'] else '', \
+			prereqs='    $(COLOR_RED)prereqs:$(NO_COLOR) {}\n'.format(h['prereqs']) if h['prereqs'] else '', \
+		) for _, h in targets.items() \
+	]; \
+	o += '\n$(COLOR_YELLOW)--- ALL TARGETS ---$(NO_COLOR)\n  ' + '\n  '.join(targets); \
+	print(o)
 
 # BEGIN: Color settings
 #
