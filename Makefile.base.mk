@@ -202,6 +202,12 @@ _help-parser:
 			open(h['abs_path'], 'r').read(), \
 			re.MULTILINE); \
 	inp = sys.stdin.read(); \
+	_format = lambda h: dict( \
+		target = h.get('target'), source = h['source'], \
+		prereqs='    $(COLOR_RED)prereq targets:$(NO_COLOR) {}\n'.format(h['prereqs']) if h['prereqs'] else '', \
+		args=('    $(COLOR_RED)env args:${NO_COLOR} {}\n'.format(h['args'])) if h['args'] else '', \
+	  docs = ('    '+'\n    '.join(h['docs'])) if h['docs'] else '', \
+	); \
 	lines = inp.split('\n'); \
 	ignored = 'Makefile list fail i in not if else for'.split(); \
 	fstarts = 'assert range('.split(); \
@@ -217,7 +223,6 @@ _help-parser:
 		args=t.split(':')[-1].split(), \
 		file=block.strip().split() and block.split()[0], \
 		line=block.strip().split() and block.split(' line ')[-1]) for t, block in hints ]; \
-		print(hints); print('----------'); \
 	hints = [ merge(h, \
 		args=[_.strip() for _ in h['args'] if _.strip()], \
 		abs_path=h['file'], \
@@ -236,33 +241,31 @@ _help-parser:
 	hints = [ merge(h, docs=h['docs'].group(0).split('\n') if h['docs'] else [],) for h in hints ]; \
 	hints = [ merge(h, docs=[x.lstrip().replace("@#","##").replace('##','#') for x in h['docs']][1:],) for h in hints ]; \
 	hints = [ merge(h, args=[x[len('assert-'):] for x in h['args'] if x.startswith('assert-')],) for h in hints ]; \
-	print(hints); print('----------'); \
 	targets = sorted(hints, key=lambda _: _['target']); \
 	targets = OrderedDict([[_['target'], _] for _ in targets]); \
 	src_files = set([x['file'] for x in hints]); \
 	sources = [ [f, [h for h in hints if h['file']==f]] for f in src_files if f ]; \
 	sources = sorted(sources, key=lambda _: _[0]); \
 	sources = OrderedDict(sources); \
-	thdr = '[$(COLOR_GREEN){target}$(NO_COLOR)] ($(COLOR_CYAN){source}$(NO_COLOR))\n'; \
-	shdr = '\n$(COLOR_YELLOW)--- TARGETS BY SOURCE---$(NO_COLOR)\n\n'; \
+	inc_sources = OrderedDict(dict([[k,v] for k,v in sources.items() if 'site' not in k and k!='Makefile'])); \
+	local_sources = OrderedDict(dict([[k,v] for k,v in sources.items() if 'site' in k or k=='Makefile'])); \
+	thdr = '{indent}◉ [$(COLOR_GREEN){target}$(NO_COLOR)] ($(COLOR_CYAN){source}$(NO_COLOR))\n'; \
+	thdr+= '{args}'; \
+	thdr+= '{prereqs}'; \
+	thdr+= '$(COLOR_DIM){docs}$(COLOR_RDIM)'; \
 	msg_t = '[$(COLOR_BLUE){file}$(NO_COLOR)] ($(COLOR_CYAN){count} targets$(NO_COLOR)){summary}'; \
-	o = shdr + '\n'.join([msg_t.format( \
+	o = '\n$(COLOR_YELLOW)--- TARGETS BY SOURCE (includes) ---$(NO_COLOR)\n\n' + '\n'.join([msg_t.format( \
 		file=file, count=len(targets), \
-		summary='\n' + '\n'.join(['    '+thdr.format(**t) for t in tlist]),) \
-		for file, tlist in sources.items()]); \
-	msg_t = thdr; \
-	msg_t+= '{args}'; \
-	msg_t+= '{prereqs}'; \
-	msg_t+= '$(COLOR_DIM){docs}$(COLOR_RDIM)'; \
-	targets=[	msg_t.format( \
-			target = h['target'], \
-			source = h['source'], \
-			docs = ('    '+'\n    '.join(h['docs'])) if h['docs'] else '', \
-			args = ('    $(COLOR_MAGENTA)args:${NO_COLOR} {}\n'.format(h['args'])) if h['args'] else '', \
-			prereqs='    $(COLOR_RED)prereqs:$(NO_COLOR) {}\n'.format(h['prereqs']) if h['prereqs'] else '', \
-		) for _, h in targets.items() \
-	]; \
-	o += '\n$(COLOR_YELLOW)--- ALL TARGETS ---$(NO_COLOR)\n  ' + '\n  '.join(targets); \
+		summary='\n' + '\n'.join([thdr.format( \
+			indent='    ', **_format(h)) for h in tlist]),) \
+		for file, tlist in inc_sources.items()]); \
+	o += '\n$(COLOR_YELLOW)--- ALL TARGETS (lexical sort)---$(NO_COLOR)\n\n{}\n'.format(',  '.join(targets)); \
+	o += '\n$(COLOR_YELLOW)--- LOCAL TARGETS (toplevel Makefile or `*site*` files)---$(NO_COLOR)\n\n'; \
+	o += '\n'.join([msg_t.format( \
+		file=file, count=len(targets), \
+		summary='\n' + '\n'.join([thdr.format( \
+			indent='    ', **_format(h)) for h in tlist]),) \
+		for file, tlist in local_sources.items()]); \
 	print(o)
 
 # BEGIN: Color settings
