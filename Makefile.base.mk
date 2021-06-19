@@ -91,7 +91,7 @@ endef
 #   	echo $${USER}@$${HOST}
 #
 define _announce_assert
-	export tmp=`echo '${1}' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$$//'` \
+	@export tmp=`echo '${1}' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$$//'` \
 	; printf "$(COLOR_YELLOW)(`hostname`)$(NO_COLOR) [$$tmp]:$(NO_COLOR) (=$2)\n" 1>&2;
 endef
 define _assert_var

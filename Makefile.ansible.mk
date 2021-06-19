@@ -19,6 +19,7 @@
 #     * `ansible-requirements`: refresh ansible galaxy roles ${ANSIBLE_GALAXY_REQUIREMENTS}
 #     * `ansible-clean`: remove file cruft (like .retry's)
 #			* `ansible-inventory-get`: retrieve merged ansible host/group vars from CLI
+#     * `ansible-describe-inventory`: ..
 #   PIPED TARGETS: (stdin->stdout)
 #     * placeholder
 #
@@ -29,17 +30,23 @@ require-ansible:
 	@# A quiet target to ensure fail-fast if ansible is not present
 	ansible --version &> /dev/null
 
-ansible-inventory-get: assert-host assert-var
+ansible-describe-inventory:
+	@#
 	$(call _announce_target, $@)
-	@export TMP=`mktemp` && \
-	ansible localhost \
-	--connection local -i ${ANSIBLE_INVENTORY} \
-	--module-name copy --args "\
-	content={{hostvars['$$host']}} dest=$${TMP}" \
-	> /dev/null && \
-	cat $${TMP} | jq -r .$$var
+	ansible-inventory \
+	--inventory $(value ANSIBLE_INVENTORY) --list \
+	| jq ._meta.hostvars
+
+ansible-inventory-get: assert-host
+	@#
+	$(call _announce_target, $@)
+	ansible-inventory \
+	--inventory $(value ANSIBLE_INVENTORY) --host $$host \
+	| jq -r .$${var:-}
+
 
 ansible-graph: assert-host require-ansible-inventory-grapher
+	@#
 	$(call _announce_target, $@)
 	ansible-inventory-grapher \
 	-i ${ANSIBLE_INVENTORY} -q $$host | \
@@ -51,11 +58,30 @@ ansible-requirements:
 	ansible-galaxy install -r ${ANSIBLE_GALAXY_REQUIREMENTS}
 
 ansible-clean:
+	@#
 	find ${SRC_ROOT} -type f | \
 	grep [.]retry$$ | \
 	xargs rm
 
+ansible-describe-context:
+	@#
+	ansible --version \
+	&& ansible-config dump
+
+ansible-play:
+	set +x
+	ansible-playbook \
+	--user $(value ANSIBLE_USER) \
+	--vault-password-file=$(value ANSIBLE_VAULT_PASSWORD_FILE) \
+	--private-key $(value ANSIBLE_KEY) \
+	--inventory $(value host), \
+	-e @$(value ANSIBLE_VARS_SECRET) \
+	-e @$(value ANSIBLE_VARS_JENKINS) \
+	-e @$(value ANSIBLE_VARS_BASE) $(value extra_ansible_args) \
+	${ANSIBLE_ROOT}/$(value playbook).yml
+
 ansible-provision: assert-host assert-playbook
+	@#
 	$(call _announce_target, $@)
 	@# dump env vars for debugging
 	$(call _show_env, "\(ANSIBLE\|VIRTUAL\)")
@@ -74,31 +100,13 @@ ansible-provision: assert-host assert-playbook
 	-e @$(value ANSIBLE_VARS_BASE) $(value extra_ansible_args) \
 	${ANSIBLE_ROOT}/$(value playbook).yml
 
-ansible-adhoc-group: assert-group require-ansible require-shyaml
+ansible-test-role: assert-role
 	$(call _announce_target, $@)
-	$(eval host:= $(shell group=$$group make ansible-get-group))
-	ANSIBLE_USER=pi host=$(value host) \
-	make ansible-adhoc-host
-
-ansible-adhoc-host: assert-host
-	$(call _announce_target, $@)
-	ansible all -i $(value host), \
-		--user=$(value ANSIBLE_USER) \
-		--private-key=$(value ANSIBLE_PRIVATE_KEY) \
-		-m $$module $$extra_ansible_args
-
-ansible-adhoc:
-	@# Run adhoc ansible against either a host
-	@# or a group, using the rest of the current
-	@# environment's settings for keys, users, etc
-	$(call _announce_target, $@)
-	@if [ "$$host" = "" ]; then \
-		make ansible-adhoc-group; \
-		exit $$?; \
-	else \
-		make ansible-adhoc-host; \
-	fi
-
-ansible-ping:
-	@# Helper for verifying connectivity with ansible's ping.
-	module=ping make ansible-adhoc
+	@# debugging: --list-tasks --list-tags
+	ansible --version \
+	; ansible-playbook -f 12 -i ${ANSIBLE_INVENTORY} \
+	 $(value extra_ansible_args) \
+	 --tags $${tags:-all} \
+	 -l ${ANSIBLE_TEST_HOST} \
+	 $${ANSIBLE_EXTRA:-} ${ANSIBLE_ROOT}/roles/$$role/tests/test.yml
+ansible-role-test: ansible-test-role
